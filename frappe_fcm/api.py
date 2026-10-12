@@ -1,6 +1,9 @@
 import frappe
+from frappe.utils import cint
 
-from frappe_fcm import devices
+from frappe_fcm import devices, notifications
+
+MAX_PAGE_LENGTH = 100
 
 
 @frappe.whitelist(methods=["POST"])
@@ -18,3 +21,17 @@ def remove_device(token: str):
 	if owner and owner != frappe.session.user:
 		frappe.throw(frappe._("This device belongs to another user."), frappe.PermissionError)
 	devices.remove_device(token)
+
+
+@frappe.whitelist(methods=["GET"])
+def get_notifications(app_name: str | None = None, start: int = 0, page_length: int = 20) -> list[dict]:
+	"""The session user's notifications, newest first."""
+	return notifications.get_notifications(
+		frappe.session.user, app_name, start=cint(start), page_length=min(cint(page_length), MAX_PAGE_LENGTH)
+	)
+
+
+@frappe.whitelist(methods=["POST"])
+def mark_read(name: str | None = None, app_name: str | None = None):
+	"""Mark the session user's notification `name` read, or all unread ones without a name."""
+	notifications.mark_read(frappe.session.user, name, app_name)

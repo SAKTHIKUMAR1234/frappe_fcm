@@ -142,13 +142,9 @@ app_license = "mit"
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+_NOTIFICATION = "frappe_fcm.frappe_fcm.doctype.fcm_notification.fcm_notification"
+permission_query_conditions = {"FCM Notification": f"{_NOTIFICATION}.get_permission_query_conditions"}
+has_permission = {"FCM Notification": f"{_NOTIFICATION}.has_permission"}
 
 # Document Events
 # ---------------
