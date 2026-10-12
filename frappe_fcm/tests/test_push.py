@@ -96,7 +96,8 @@ class TestDeliver(FCMTestCase):
 	def test_a_dead_token_deletes_the_device_and_logs_the_error(self):
 		dead = {
 			"UNREGISTERED": make_error(404, "NOT_FOUND", "UNREGISTERED"),
-			"INVALID_ARGUMENT": make_error(400, "INVALID_ARGUMENT"),
+			"NOT_FOUND": make_error(404, "NOT_FOUND"),
+			"INVALID_ARGUMENT": make_error(400, "INVALID_ARGUMENT", "INVALID_ARGUMENT", "message.token"),
 		}
 		for code, response in dead.items():
 			device = self.add_device(self.other_user)
@@ -104,10 +105,23 @@ class TestDeliver(FCMTestCase):
 
 			self.assertEqual(deliver_to_users([self.other_user], Push("Hi", "Body")), [])
 
-			self.assertFalse(frappe.db.exists(DEVICE, device.name))
+			self.assertFalse(frappe.db.exists(DEVICE, device.name), code)
 			log = self.get_log(device.token)
 			self.assertEqual(log.status, "Failed")
 			self.assertTrue(log.error.startswith(code))
+
+	def test_an_invalid_argument_of_the_message_keeps_the_device(self):
+		for response in (
+			make_error(400, "INVALID_ARGUMENT", "INVALID_ARGUMENT", "message.data[0].value"),
+			make_error(400, "INVALID_ARGUMENT", "INVALID_ARGUMENT"),
+		):
+			self.mock_http(response)
+
+			self.assertEqual(deliver_to_users([self.user], Push("Hi", "Body"), "Shop"), [])
+
+			self.assertTrue(frappe.db.exists(DEVICE, self.device.name))
+		logs = frappe.get_all(MESSAGE_LOG, {"target": self.device.token}, pluck="status")
+		self.assertEqual(logs, ["Failed", "Failed"])
 
 	def test_another_error_keeps_the_device(self):
 		self.mock_http(make_error(503, "UNAVAILABLE"), requests.ConnectionError("down"))

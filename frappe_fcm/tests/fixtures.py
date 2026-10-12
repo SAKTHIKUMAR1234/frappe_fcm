@@ -18,10 +18,22 @@ def make_response(status: int, body: dict) -> requests.Response:
 	return response
 
 
-def make_error(status: int, code: str, error_code: str | None = None) -> requests.Response:
-	details = [{"@type": "type.googleapis.com/google.firebase.fcm.v1.FcmError", "errorCode": error_code}]
+def make_error(status: int, code: str, error_code: str | None = None, field: str | None = None):
+	"""An FCM v1 error body: `errorCode` in an FcmError detail, `field` in a BadRequest violation."""
+	details = []
+	if error_code:
+		details.append(
+			{"@type": "type.googleapis.com/google.firebase.fcm.v1.FcmError", "errorCode": error_code}
+		)
+	if field:
+		details.append(
+			{
+				"@type": "type.googleapis.com/google.rpc.BadRequest",
+				"fieldViolations": [{"field": field, "description": "invalid"}],
+			}
+		)
 	return make_response(
-		status, {"error": {"code": status, "status": code, "details": details if error_code else []}}
+		status, {"error": {"code": status, "status": code, "message": "m", "details": details}}
 	)
 
 

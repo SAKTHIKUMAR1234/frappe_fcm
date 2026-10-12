@@ -54,7 +54,7 @@ Inbox, in `frappe_fcm.notifications`:
 
 An app changes the push of its notifications with the hook `fcm_push = {"<app_name>": "dotted.path"}`. The function gets the FCM Notification and returns a `Push`, or None to send nothing (for example when the user may no longer get it). Without the hook, the push has the title and body, and `data` plus `notification` (the row name).
 
-When FCM answers `UNREGISTERED` or `INVALID_ARGUMENT` for a token, the device is deleted. Other errors keep the device. Each send writes an FCM Message Log.
+When FCM says the token is dead, the device is deleted: `UNREGISTERED`, `NOT_FOUND`, or `INVALID_ARGUMENT` whose `fieldViolations` name `message.token`. Other errors, such as an `INVALID_ARGUMENT` for the message, keep the device. Each send writes an FCM Message Log.
 
 ### Endpoints
 

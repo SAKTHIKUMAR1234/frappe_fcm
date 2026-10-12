@@ -7,8 +7,6 @@ from frappe_fcm.client import FCMClient, FCMError, get_client
 from frappe_fcm.devices import get_enabled_devices, remove_device
 
 MESSAGE_LOG = "FCM Message Log"
-# FCM error codes of a token that no longer reaches a device.
-DEAD_TOKEN_ERRORS = {"UNREGISTERED", "INVALID_ARGUMENT"}
 
 
 @dataclass(frozen=True)
@@ -80,7 +78,7 @@ def send_to_topic(
 
 def deliver_to_users(users: list[str], push: Push, app_name: str | None = None) -> list[str]:
 	"""Send `push` now to each enabled device of `users` and return the message ids. A device whose token
-	FCM reports dead is deleted."""
+	FCM reports dead (`FCMError.is_dead_token`) is deleted."""
 	devices = get_enabled_devices(users, app_name)
 	client = get_client() if devices else None
 	if not client:
@@ -91,7 +89,7 @@ def deliver_to_users(users: list[str], push: Push, app_name: str | None = None) 
 		try:
 			message_ids.append(send(client, push, {"token": device.token}, device.user))
 		except FCMError as error:
-			if error.code in DEAD_TOKEN_ERRORS:
+			if error.is_dead_token:
 				remove_device(device.token)
 	return message_ids
 
