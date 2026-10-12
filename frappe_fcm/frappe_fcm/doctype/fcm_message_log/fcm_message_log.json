@@ -1,0 +1,108 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "hash",
+ "creation": "2026-10-12 06:40:16.465656",
+ "description": "One FCM send to a device or a topic.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "target",
+  "user",
+  "status",
+  "message_id",
+  "column_break_message",
+  "title",
+  "body",
+  "data",
+  "error"
+ ],
+ "fields": [
+  {
+   "description": "The device token or the topic.",
+   "fieldname": "target",
+   "fieldtype": "Data",
+   "label": "Target",
+   "length": 255,
+   "reqd": 1
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "User",
+   "options": "User"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Sent\nFailed",
+   "reqd": 1
+  },
+  {
+   "fieldname": "message_id",
+   "fieldtype": "Data",
+   "label": "Message ID"
+  },
+  {
+   "fieldname": "column_break_message",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title"
+  },
+  {
+   "fieldname": "body",
+   "fieldtype": "Small Text",
+   "label": "Body"
+  },
+  {
+   "fieldname": "data",
+   "fieldtype": "Code",
+   "label": "Data",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "error",
+   "fieldtype": "Small Text",
+   "label": "Error"
+  }
+ ],
+ "grid_page_length": 50,
+ "in_create": 1,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-12 06:40:16.465656",
+ "modified_by": "Administrator",
+ "module": "Frappe FCM",
+ "name": "FCM Message Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
