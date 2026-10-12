@@ -28,7 +28,11 @@ def notify(user: str, title: str, body: str, data: dict | None = None, app_name:
 def push_notification(name: str):
 	"""Push the notification to the user's enabled devices of its app and keep the first message id.
 	The app's `fcm_push` hook builds the push and can skip it."""
-	doc = frappe.get_doc(NOTIFICATION, name)
+	try:
+		doc = frappe.get_doc(NOTIFICATION, name)
+	except frappe.DoesNotExistError:
+		# The inbox row can be deleted while its after-commit job is waiting.
+		return
 	push = get_push(doc)
 	message_ids = deliver_to_users([doc.user], push, doc.app_name) if push else []
 	if message_ids:

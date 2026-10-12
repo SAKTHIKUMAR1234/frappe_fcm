@@ -5,8 +5,8 @@ import frappe
 
 from frappe_fcm import api, notifications
 from frappe_fcm.notifications import NOTIFICATION, notify
-from frappe_fcm.push import Push
-from frappe_fcm.tests.fixtures import MESSAGE_ID, FCMTestCase, make_response
+from frappe_fcm.push import MESSAGE_LOG, Push
+from frappe_fcm.tests.fixtures import MESSAGE_ID, FCMTestCase, make_error, make_response
 
 HOOK = "frappe_fcm.tests.test_notifications.get_shop_push"
 
@@ -65,6 +65,34 @@ class TestPushNotification(NotificationTestCase):
 			return get_hooks(hook, default, *args, **kwargs)
 
 		self.get_hooks = patch.object(frappe, "get_hooks", side_effect=get_test_hooks)
+
+	def test_deleted_notification_skips_without_sending_or_logging(self):
+		post = self.mock_http()
+		doc = self.add()
+		frappe.delete_doc(NOTIFICATION, doc.name, ignore_permissions=True)
+		error_count = frappe.db.count("Error Log")
+		with patch.object(frappe, "log_error") as log_error:
+			self.assertIsNone(notifications.push_notification(doc.name))
+		post.assert_not_called()
+		log_error.assert_not_called()
+		self.assertEqual(frappe.db.count("Error Log"), error_count)
+		self.assertFalse(frappe.db.exists(MESSAGE_LOG, {"target": self.device.token}))
+
+	def test_real_send_failure_is_still_logged(self):
+		post = self.mock_http(make_error(503, "UNAVAILABLE"))
+		doc = self.add()
+		notifications.push_notification(doc.name)
+		post.assert_called_once()
+		log = frappe.get_doc(MESSAGE_LOG, {"target": self.device.token})
+		self.assertEqual(log.status, "Failed")
+		self.assertIn("UNAVAILABLE", log.error)
+		self.assertIsNone(frappe.db.get_value(NOTIFICATION, doc.name, "message_id"))
+
+	def test_missing_record_in_push_builder_is_not_swallowed(self):
+		doc = self.add()
+		with patch.object(notifications, "get_push", side_effect=frappe.DoesNotExistError):
+			with self.assertRaises(frappe.DoesNotExistError):
+				notifications.push_notification(doc.name)
 
 	def test_the_default_push_carries_the_name_and_keeps_the_message_id(self):
 		post = self.mock_http(make_response(200, {"name": MESSAGE_ID}))
