@@ -7,7 +7,13 @@ from frappe.tests import IntegrationTestCase
 
 from frappe_fcm.devices import DEVICE
 
-SERVICE_ACCOUNT = {"type": "service_account", "project_id": "demo-project", "client_email": "push@demo"}
+SERVICE_ACCOUNT = {
+	"type": "service_account",
+	"project_id": "demo-project",
+	"private_key": "-----BEGIN PRIVATE KEY-----\nkey\n-----END PRIVATE KEY-----\n",
+	"client_email": "push@demo",
+	"token_uri": "https://oauth2.googleapis.com/token",
+}
 MESSAGE_ID = "projects/demo-project/messages/1"
 
 
@@ -60,9 +66,16 @@ class FCMTestCase(IntegrationTestCase):
 			{"doctype": DEVICE, "user": user, "token": frappe.generate_hash(), "app_name": app_name, **values}
 		).insert(ignore_permissions=True)
 
-	def set_service_account(self):
+	def upload_key_file(self, content: str, is_private: int = 1) -> str:
+		"""The URL of a new key file of `content`."""
+		file = frappe.get_doc(
+			{"doctype": "File", "file_name": "key.json", "content": content, "is_private": is_private}
+		)
+		return file.insert(ignore_permissions=True).file_url
+
+	def set_service_account(self, info: dict = SERVICE_ACCOUNT):
 		settings = frappe.get_single("FCM Settings")
-		settings.service_account_json = json.dumps(SERVICE_ACCOUNT)
+		settings.service_account_file = self.upload_key_file(json.dumps(info))
 		settings.save(ignore_permissions=True)
 
 	def mock_http(self, *responses: requests.Response):

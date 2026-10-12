@@ -2,33 +2,100 @@
  "actions": [],
  "allow_bulk_edit": 1,
  "creation": "2026-10-12 06:40:16.193070",
- "description": "Credentials for FCM HTTP v1.",
+ "description": "Firebase credentials for FCM HTTP v1 and the web push config.",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "service_account_json",
-  "project_id"
+  "service_account_section",
+  "service_account_file",
+  "project_id",
+  "web_push_section",
+  "enable_web_push",
+  "api_key",
+  "auth_domain",
+  "messaging_sender_id",
+  "column_break_web",
+  "app_id",
+  "vapid_key"
  ],
  "fields": [
   {
-   "description": "The Firebase service account key file content (JSON).",
-   "fieldname": "service_account_json",
-   "fieldtype": "Password",
-   "label": "Service Account JSON"
-  },
-  {
-   "description": "Firebase project id. Empty takes the project_id of the service account.",
+   "description": "Read from the key file.",
    "fieldname": "project_id",
    "fieldtype": "Data",
-   "label": "Project ID"
+   "label": "Project ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "service_account_section",
+   "fieldtype": "Section Break",
+   "label": "Service Account"
+  },
+  {
+   "description": "The JSON key file from Firebase console > Project settings > Service accounts > Generate new private key. Upload it as a private file.",
+   "fieldname": "service_account_file",
+   "fieldtype": "Attach",
+   "label": "Service Account Key File"
+  },
+  {
+   "description": "From Firebase console > Project settings > General > Your apps > Web app config, and Cloud Messaging > Web Push certificates.",
+   "fieldname": "web_push_section",
+   "fieldtype": "Section Break",
+   "label": "Web Push"
+  },
+  {
+   "default": "0",
+   "description": "Register the browser of each desk user for pushes.",
+   "fieldname": "enable_web_push",
+   "fieldtype": "Check",
+   "label": "Enable Web Push"
+  },
+  {
+   "depends_on": "enable_web_push",
+   "fieldname": "api_key",
+   "fieldtype": "Data",
+   "label": "API Key",
+   "mandatory_depends_on": "enable_web_push"
+  },
+  {
+   "depends_on": "enable_web_push",
+   "fieldname": "auth_domain",
+   "fieldtype": "Data",
+   "label": "Auth Domain"
+  },
+  {
+   "depends_on": "enable_web_push",
+   "fieldname": "messaging_sender_id",
+   "fieldtype": "Data",
+   "label": "Messaging Sender ID",
+   "mandatory_depends_on": "enable_web_push"
+  },
+  {
+   "fieldname": "column_break_web",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "enable_web_push",
+   "fieldname": "app_id",
+   "fieldtype": "Data",
+   "label": "App ID",
+   "mandatory_depends_on": "enable_web_push"
+  },
+  {
+   "depends_on": "enable_web_push",
+   "description": "The public key of the Web Push certificate key pair.",
+   "fieldname": "vapid_key",
+   "fieldtype": "Data",
+   "label": "VAPID Key",
+   "mandatory_depends_on": "enable_web_push"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-12 06:40:16.193070",
+ "modified": "2026-10-12 09:45:40.014768",
  "modified_by": "Administrator",
  "module": "Frappe FCM",
  "name": "FCM Settings",

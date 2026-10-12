@@ -71,4 +71,4 @@ def get_client() -> FCMClient | None:
 	if not info:
 		frappe.logger("frappe_fcm").warning("FCM Settings has no service account; push not sent.")
 		return None
-	return FCMClient(info, settings.project_id or info["project_id"])
+	return FCMClient(info, info["project_id"])

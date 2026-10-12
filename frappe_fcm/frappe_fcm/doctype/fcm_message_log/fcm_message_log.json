@@ -13,6 +13,8 @@
   "user",
   "status",
   "message_id",
+  "delivered_on",
+  "opened_on",
   "column_break_message",
   "title",
   "body",
@@ -75,13 +77,27 @@
    "fieldname": "error",
    "fieldtype": "Small Text",
    "label": "Error"
+  },
+  {
+   "description": "When the device reported the message delivered.",
+   "fieldname": "delivered_on",
+   "fieldtype": "Datetime",
+   "label": "Delivered On",
+   "read_only": 1
+  },
+  {
+   "description": "When the user opened or clicked the message.",
+   "fieldname": "opened_on",
+   "fieldtype": "Datetime",
+   "label": "Opened On",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-12 06:40:16.465656",
+ "modified": "2026-10-12 09:45:56.900059",
  "modified_by": "Administrator",
  "module": "Frappe FCM",
  "name": "FCM Message Log",

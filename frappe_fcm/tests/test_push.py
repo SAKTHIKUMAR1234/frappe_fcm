@@ -9,7 +9,13 @@ from frappe_fcm import push
 from frappe_fcm.devices import DEVICE
 from frappe_fcm.frappe_fcm.doctype.fcm_message_log.fcm_message_log import FCMMessageLog
 from frappe_fcm.push import MESSAGE_LOG, Push, deliver_to_topic, deliver_to_users
-from frappe_fcm.tests.fixtures import MESSAGE_ID, FCMTestCase, make_error, make_response
+from frappe_fcm.tests.fixtures import (
+	MESSAGE_ID,
+	SERVICE_ACCOUNT,
+	FCMTestCase,
+	make_error,
+	make_response,
+)
 
 
 class TestSend(FCMTestCase):
@@ -73,7 +79,9 @@ class TestDeliver(FCMTestCase):
 
 	def get_log(self, target: str) -> dict:
 		(log,) = frappe.get_all(
-			MESSAGE_LOG, {"target": target}, ["user", "status", "message_id", "title", "data", "error"]
+			MESSAGE_LOG,
+			{"target": target},
+			["name", "user", "status", "message_id", "title", "data", "error"],
 		)
 		return log
 
@@ -86,12 +94,14 @@ class TestDeliver(FCMTestCase):
 		self.assertEqual(
 			post.call_args.args[0], "https://fcm.googleapis.com/v1/projects/demo-project/messages:send"
 		)
-		self.assertEqual(post.call_args.kwargs["json"]["message"]["token"], self.device.token)
+		message = post.call_args.kwargs["json"]["message"]
+		self.assertEqual(message["token"], self.device.token)
 		log = self.get_log(self.device.token)
 		self.assertEqual(
 			(log.user, log.status, log.message_id, log.title, json.loads(log.data)),
 			(self.user, "Sent", MESSAGE_ID, "Hi", {"a": "1"}),
 		)
+		self.assertEqual(message["data"], {"a": "1", "fcm_message": log.name})
 
 	def test_a_dead_token_deletes_the_device_and_logs_the_error(self):
 		dead = {
@@ -143,7 +153,7 @@ class TestDeliver(FCMTestCase):
 		post.assert_not_called()
 
 	def test_no_send_without_a_service_account(self):
-		frappe.db.delete("__Auth", {"doctype": "FCM Settings"})
+		frappe.db.set_single_value("FCM Settings", "service_account_file", None)
 		post = self.mock_http()
 
 		self.assertEqual(deliver_to_users([self.user], Push("Hi", "Body")), [])
@@ -161,7 +171,7 @@ class TestDeliver(FCMTestCase):
 
 
 class TestSettingsAndLog(FCMTestCase):
-	def test_project_id_comes_from_the_service_account(self):
+	def test_project_id_and_key_come_from_the_file(self):
 		self.set_service_account()
 
 		settings = frappe.get_single("FCM Settings")
@@ -169,12 +179,29 @@ class TestSettingsAndLog(FCMTestCase):
 		self.assertEqual(settings.project_id, "demo-project")
 		self.assertEqual(settings.service_account["client_email"], "push@demo")
 
-	def test_a_value_that_is_not_a_service_account_is_refused(self):
+	def test_a_file_that_is_not_a_service_account_key_is_refused(self):
+		missing_key = {key: value for key, value in SERVICE_ACCOUNT.items() if key != "private_key"}
 		settings = frappe.get_single("FCM Settings")
-		for value in ("not json", json.dumps({"type": "authorized_user"})):
-			settings.service_account_json = value
+		for content in ("not json", json.dumps({"type": "authorized_user"}), json.dumps(missing_key)):
+			settings.service_account_file = self.upload_key_file(content)
 			with self.assertRaises(frappe.ValidationError):
 				settings.save(ignore_permissions=True)
+
+	def test_a_public_file_is_refused(self):
+		settings = frappe.get_single("FCM Settings")
+		settings.service_account_file = self.upload_key_file(json.dumps(SERVICE_ACCOUNT), is_private=0)
+
+		with self.assertRaises(frappe.ValidationError):
+			settings.save(ignore_permissions=True)
+
+	def test_no_file_clears_the_project_id(self):
+		self.set_service_account()
+		settings = frappe.get_single("FCM Settings")
+		settings.service_account_file = None
+		settings.save(ignore_permissions=True)
+
+		self.assertIsNone(settings.project_id)
+		self.assertIsNone(settings.service_account)
 
 	def test_old_logs_are_cleared(self):
 		old = frappe.get_doc({"doctype": MESSAGE_LOG, "target": "t", "status": "Sent"}).insert()

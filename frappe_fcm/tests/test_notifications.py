@@ -1,5 +1,5 @@
 import json
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 import frappe
 
@@ -73,7 +73,7 @@ class TestPushNotification(NotificationTestCase):
 		notifications.push_notification(doc.name)
 
 		message = post.call_args.kwargs["json"]["message"]
-		self.assertEqual(message["data"], {"a": "1", "notification": doc.name})
+		self.assertEqual(message["data"], {"a": "1", "notification": doc.name, "fcm_message": ANY})
 		self.assertEqual(message["notification"], {"title": "Hi", "body": "Body"})
 		self.assertEqual(frappe.db.get_value(NOTIFICATION, doc.name, "message_id"), MESSAGE_ID)
 
@@ -85,7 +85,7 @@ class TestPushNotification(NotificationTestCase):
 			notifications.push_notification(doc.name)
 
 		message = post.call_args.kwargs["json"]["message"]
-		self.assertEqual(message["data"], {"title": "Hi", "body": "Body", "id": doc.name})
+		self.assertEqual(message["data"], {"title": "Hi", "body": "Body", "id": doc.name, "fcm_message": ANY})
 		self.assertNotIn("notification", message)
 
 	def test_the_app_hook_can_skip_the_push(self):

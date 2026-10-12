@@ -262,6 +262,11 @@ has_permission = {"FCM Notification": f"{_NOTIFICATION}.has_permission"}
 
 default_log_clearing_doctypes = {"FCM Message Log": 30}
 
+# Web push: the client JS does nothing unless `extend_bootinfo` gives it the config.
+app_include_js = "/assets/frappe_fcm/js/web_push.js"
+extend_bootinfo = "frappe_fcm.web_push.boot"
+page_renderer = ["frappe_fcm.web_push.ServiceWorkerPage"]
+
 # Translation
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.

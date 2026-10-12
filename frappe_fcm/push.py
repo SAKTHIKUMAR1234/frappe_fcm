@@ -7,6 +7,8 @@ from frappe_fcm.client import FCMClient, FCMError, get_client
 from frappe_fcm.devices import get_enabled_devices, remove_device
 
 MESSAGE_LOG = "FCM Message Log"
+# The data key of the FCM Message Log name in each message.
+MESSAGE_KEY = "fcm_message"
 
 
 @dataclass(frozen=True)
@@ -106,7 +108,8 @@ def deliver_to_topic(topic: str, push: Push) -> str | None:
 
 
 def send(client: FCMClient, push: Push, target: dict, user: str | None = None) -> str:
-	"""Send one message and write its FCM Message Log; a failure is logged and raised."""
+	"""Send one message and write its FCM Message Log; a failure is logged and raised. The message data
+	carries `fcm_message`, the log name, so the client can report the message delivered or opened."""
 	log = frappe.new_doc(
 		MESSAGE_LOG,
 		target=next(iter(target.values())),
@@ -115,13 +118,16 @@ def send(client: FCMClient, push: Push, target: dict, user: str | None = None) -
 		body=push.body,
 		data=json.dumps(push.data or {}),
 	)
+	name = frappe.generate_hash(length=10)
+	message = push.get_message(target)
+	message["data"][MESSAGE_KEY] = name
 	try:
-		log.message_id = client.send(push.get_message(target))
+		log.message_id = client.send(message)
 	except FCMError as error:
 		log.status = "Failed"
 		log.error = str(error)
-		log.insert(ignore_permissions=True)
+		log.insert(ignore_permissions=True, set_name=name)
 		raise
 	log.status = "Sent"
-	log.insert(ignore_permissions=True)
+	log.insert(ignore_permissions=True, set_name=name)
 	return log.message_id
