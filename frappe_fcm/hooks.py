@@ -10,16 +10,17 @@ app_license = "mit"
 
 # required_apps = []
 
-# Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "frappe_fcm",
-# 		"logo": "/assets/frappe_fcm/logo.png",
-# 		"title": "Frappe FCM",
-# 		"route": "/frappe_fcm",
-# 		"has_permission": "frappe_fcm.api.permission.has_app_permission",
-# 	}
-# ]
+app_logo_url = "/assets/frappe_fcm/images/frappe-fcm-logo.svg"
+
+add_to_apps_screen = [
+	{
+		"name": app_name,
+		"logo": app_logo_url,
+		"title": app_title,
+		"route": "/desk/fcm-settings",
+		"has_permission": "frappe_fcm.api.has_app_permission",
+	}
+]
 
 # The dock, the rail down the left of the desk, is a document rather than a hook. Author it in
 # Manage Dock on a developer-mode site and press Export to App, and it is written to

@@ -35,3 +35,8 @@ def get_notifications(app_name: str | None = None, start: int = 0, page_length: 
 def mark_read(name: str | None = None, app_name: str | None = None):
 	"""Mark the session user's notification `name` read, or all unread ones without a name."""
 	notifications.mark_read(frappe.session.user, name, app_name)
+
+
+def has_app_permission() -> bool:
+	"""Show the app on the apps screen to users who may open FCM Settings."""
+	return frappe.has_permission("FCM Settings", "write")

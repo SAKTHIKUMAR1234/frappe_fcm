@@ -1,6 +1,6 @@
 ### Frappe FCM
 
-Firebase Cloud Messaging push for Frappe
+Firebase Cloud Messaging push for Frappe. Any app can install it to store users' device tokens, keep a per-user notification inbox (read and unread), and push to every device of a user or to a topic through FCM HTTP v1.
 
 ### Installation
 
@@ -15,7 +15,7 @@ bench install-app frappe_fcm
 ### Setup
 
 1. In the Firebase console, open Project settings > Service accounts and generate a new private key.
-2. In **FCM Settings**, paste the key file content into **Service Account JSON**. **Project ID** comes from the key when empty.
+2. Open **FCM Settings** (the Frappe FCM icon on the apps screen). Paste the key file content into **Service Account JSON**. **Project ID** comes from the key when empty.
 
 Without a service account, nothing is sent and a warning is logged.
 
