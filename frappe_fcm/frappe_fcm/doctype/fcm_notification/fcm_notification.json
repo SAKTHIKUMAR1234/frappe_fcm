@@ -12,6 +12,7 @@
   "user",
   "app_name",
   "read",
+  "app_operation",
   "message_id",
   "column_break_content",
   "reference_doctype",
@@ -44,6 +45,13 @@
    "fieldtype": "Check",
    "in_list_view": 1,
    "label": "Read"
+  },
+  {
+   "description": "The action the app opens for the notification, such as a screen name.",
+   "fieldname": "app_operation",
+   "fieldtype": "Data",
+   "label": "App Operation",
+   "read_only": 1
   },
   {
    "description": "The FCM message id of the first device the push reached.",
@@ -94,7 +102,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-12 06:44:57.373706",
+ "modified": "2026-10-14 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe FCM",
  "name": "FCM Notification",

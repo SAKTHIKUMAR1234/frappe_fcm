@@ -6,7 +6,19 @@ from frappe import _
 from frappe_fcm.push import Push, deliver_to_users
 
 NOTIFICATION = "FCM Notification"
-FIELDS = ("name", "title", "body", "data", "read", "creation", "reference_doctype", "reference_name")
+FIELDS = (
+	"name",
+	"title",
+	"body",
+	"data",
+	"read",
+	"creation",
+	"reference_doctype",
+	"reference_name",
+	"app_operation",
+)
+# The Socket.IO event of a new notification of an app without an `fcm_realtime` hook.
+REALTIME_EVENT = "fcm_notification"
 
 
 def notify(user: str, title: str, body: str, data: dict | None = None, app_name: str | None = None, **values):
@@ -42,10 +54,34 @@ def push_notification(name: str):
 def get_push(doc) -> Push | None:
 	"""The push of a notification. The hook `fcm_push = {app_name: "dotted.path"}` gives a function
 	`(doc) -> Push | None`; None sends nothing. Without a hook, the data carries the notification name."""
-	builders = frappe.get_hooks("fcm_push", {}).get(doc.app_name)
-	if builders:
-		return frappe.get_attr(builders[-1])(doc)
+	if builder := get_app_hook("fcm_push", doc.app_name):
+		return builder(doc)
 	return Push(doc.title, doc.body or "", {**get_data(doc), "notification": doc.name})
+
+
+def publish_notification(name: str):
+	"""Tell the notification's user over Socket.IO that a new notification exists, independently of push
+	delivery. Only the user's own sessions get the event."""
+	doc = frappe.get_doc(NOTIFICATION, name)
+	signal = get_realtime(doc)
+	if signal:
+		event, payload = signal
+		frappe.publish_realtime(event, payload, user=doc.user)
+
+
+def get_realtime(doc) -> tuple[str, dict] | None:
+	"""The Socket.IO event and payload of a new notification. The hook `fcm_realtime = {app_name:
+	"dotted.path"}` gives a function `(doc) -> (event, payload) | None`; None sends nothing. Without a
+	hook, the event is `fcm_notification` with the notification name only."""
+	if builder := get_app_hook("fcm_realtime", doc.app_name):
+		return builder(doc)
+	return REALTIME_EVENT, {"notification": doc.name}
+
+
+def get_app_hook(hook: str, app_name: str | None):
+	"""The last function of a hook `{app_name: "dotted.path"}` for `app_name`, or None."""
+	paths = frappe.get_hooks(hook, {}).get(app_name)
+	return frappe.get_attr(paths[-1]) if paths else None
 
 
 def get_data(row) -> dict:

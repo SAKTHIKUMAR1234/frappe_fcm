@@ -1,7 +1,8 @@
 import json
-from unittest.mock import ANY, patch
+from unittest.mock import ANY, call, patch
 
 import frappe
+from frappe.utils import CallbackManager
 
 from frappe_fcm import api, notifications
 from frappe_fcm.notifications import NOTIFICATION, notify
@@ -9,11 +10,21 @@ from frappe_fcm.push import MESSAGE_LOG, Push
 from frappe_fcm.tests.fixtures import MESSAGE_ID, FCMTestCase, make_error, make_response
 
 HOOK = "frappe_fcm.tests.test_notifications.get_shop_push"
+REALTIME_HOOK = "frappe_fcm.tests.test_notifications.get_shop_realtime"
 
 
 def get_shop_push(doc) -> Push | None:
 	"""An app's `fcm_push` hook: a data-only push, none for a title `skip`."""
 	return None if doc.title == "skip" else Push(doc.title, doc.body, {"id": doc.name}, data_only=True)
+
+
+def get_shop_realtime(doc) -> tuple[str, dict] | None:
+	"""An app's `fcm_realtime` hook: its own event, none for a title `skip`."""
+	return (
+		None
+		if doc.title == "skip"
+		else ("shop_notification", {"id": doc.name, "operation": doc.app_operation})
+	)
 
 
 class NotificationTestCase(FCMTestCase):
@@ -127,6 +138,62 @@ class TestPushNotification(NotificationTestCase):
 		self.assertIsNone(frappe.db.get_value(NOTIFICATION, doc.name, "message_id"))
 
 
+class TestRealtime(NotificationTestCase):
+	def setUp(self):
+		super().setUp()
+		patch.object(frappe, "enqueue").start()
+		patch.object(frappe.db, "after_commit", CallbackManager()).start()
+		self.publish = patch.object(frappe, "publish_realtime").start()
+		get_hooks = frappe.get_hooks
+
+		def get_test_hooks(hook=None, default=None, *args, **kwargs):
+			if hook == "fcm_realtime":
+				return {"Shop": [REALTIME_HOOK]}
+			return get_hooks(hook, default, *args, **kwargs)
+
+		patch.object(frappe, "get_hooks", side_effect=get_test_hooks).start()
+
+	def get_events(self) -> list:
+		"""The published user events; the desk's own `doc_update` and `list_update` events are left out."""
+		return [call for call in self.publish.call_args_list if "user" in call.kwargs]
+
+	def test_the_default_event_carries_only_the_name_to_the_user_after_commit(self):
+		doc = notify(self.user, "Hi", "Body", {"secret": "x"}, "Other")
+		self.assertEqual(self.get_events(), [])
+
+		frappe.db.after_commit.run()
+
+		self.assertEqual(
+			self.get_events(), [call("fcm_notification", {"notification": doc.name}, user=self.user)]
+		)
+
+	def test_the_app_hook_builds_the_event(self):
+		doc = notify(self.user, "Hi", "Body", app_name="Shop", app_operation="order")
+
+		frappe.db.after_commit.run()
+
+		self.assertEqual(
+			self.get_events(),
+			[call("shop_notification", {"id": doc.name, "operation": "order"}, user=self.user)],
+		)
+
+	def test_the_app_hook_can_skip_and_a_migrated_row_sends_nothing(self):
+		notify(self.user, "skip", "Body", app_name="Shop")
+		self.add()
+
+		frappe.db.after_commit.run()
+
+		self.assertEqual(self.get_events(), [])
+
+	def test_a_rolled_back_notification_sends_nothing(self):
+		notify(self.user, "Hi", "Body", app_name="Shop")
+
+		frappe.db.rollback()
+		frappe.db.after_commit.run()
+
+		self.assertEqual(self.get_events(), [])
+
+
 class TestInbox(NotificationTestCase):
 	def test_list_has_only_the_users_rows_of_the_app_newest_first(self):
 		first = self.add().name
@@ -139,6 +206,7 @@ class TestInbox(NotificationTestCase):
 
 		self.assertEqual([row.name for row in rows], [second, first])
 		self.assertEqual(rows[0].reference_name, self.user)
+		self.assertIn("app_operation", rows[0])
 		self.assertEqual([row.name for row in page], [first])
 		self.assertEqual(notifications.count_notifications(self.user, "Shop"), 2)
 		self.assertEqual(notifications.count_notifications(self.user), 3)

@@ -1,20 +1,28 @@
 # Copyright (c) 2026, Essdee and contributors
 # For license information, please see license.txt
 
+from functools import partial
+
 import frappe
 from frappe.model.document import Document
+
+from frappe_fcm.notifications import publish_notification
 
 
 class FCMNotification(Document):
 	def after_insert(self):
-		"""Push the notification after commit. A migrated row sets `flags.skip_push`."""
-		if not self.flags.skip_push:
-			frappe.enqueue(
-				"frappe_fcm.notifications.push_notification",
-				queue="short",
-				enqueue_after_commit=True,
-				name=self.name,
-			)
+		"""Push the notification and publish its Socket.IO event after commit. A migrated row sets
+		`flags.skip_push` and gets neither."""
+		if self.flags.skip_push:
+			return
+
+		frappe.enqueue(
+			"frappe_fcm.notifications.push_notification",
+			queue="short",
+			enqueue_after_commit=True,
+			name=self.name,
+		)
+		frappe.db.after_commit.add(partial(publish_notification, self.name))
 
 
 def is_manager(user: str) -> bool:

@@ -33,14 +33,15 @@ When web push is on and configured, the desk loads the Firebase JS SDK compat bu
 | --- | --- |
 | **FCM Settings** | The service account key file (private), the project id and the web push config. |
 | **FCM Device** | One row per FCM token: `user`, `token`, `platform` (Android, iOS or Web), `app_name`, `app_version`, `last_seen`, `enabled`. |
-| **FCM Notification** | The user's inbox: `user`, `app_name`, `title`, `body`, `data` (JSON), `read`, `message_id` (first push), `reference_doctype`, `reference_name`. A user reads only their own rows (also through `/api/resource`); a System Manager reads all. |
+| **FCM Notification** | The user's inbox: `user`, `app_name`, `title`, `body`, `data` (JSON), `read`, `message_id` (first push), `reference_doctype`, `reference_name`, `app_operation` (the action the app opens). A user reads only their own rows (also through `/api/resource`); a System Manager reads all. |
 | **FCM Message Log** | One row per send to one device or topic: `target` (token or topic), `user`, `title`, `body`, `data`, `status` (Sent or Failed), `message_id`, `error`, `delivered_on`, `opened_on`. The list shows the counts of sent, delivered, opened and failed messages of the current filters. Log Settings clears rows older than 30 days. |
 
 ### Python API
 
 | Function | Use |
 | --- | --- |
-| `frappe_fcm.devices.register_device(user, token, platform, app_name, app_version)` | Enable the token for the user. One row per token: a token of another user moves to `user`. Commits the open transaction first. |
+| `frappe_fcm.devices.register_device(user, token, platform, app_name, app_version)` | Enable the token for the user. One row per token: a token of another user moves to `user`. Commits the open transaction first. The token is stripped; an empty token or one longer than 255 characters is refused. |
+| `frappe_fcm.devices.clean_token(token)` / `get_platform(text)` | Validate client input: the stripped token or None, and the FCM Device platform of `android`, `ios` or `web` (any case) or None. |
 | `frappe_fcm.devices.remove_device(token)` | Delete the device. |
 | `frappe_fcm.devices.disable_devices(user, app_name=None)` | Stop pushes to the user's devices, for example at logout. |
 | `frappe_fcm.push.send_to_users(users, title, body, data=None, app_name=None)` | Queue a push (queue `short`, after commit) to the enabled devices of the users. |
@@ -54,13 +55,15 @@ Inbox, in `frappe_fcm.notifications`:
 
 | Function | Use |
 | --- | --- |
-| `notify(user, title, body, data=None, app_name=None, **values)` | Add an FCM Notification. After commit it is pushed (queue `short`) to the user's enabled devices of `app_name`, and the first message id is kept. A row with `flags.skip_push` is not pushed. |
+| `notify(user, title, body, data=None, app_name=None, **values)` | Add an FCM Notification. After commit it is pushed (queue `short`) to the user's enabled devices of `app_name`, and the first message id is kept, and a Socket.IO event goes to the user. A row with `flags.skip_push` gets neither. |
 | `get_notifications(user, app_name=None, filters=None, start=0, page_length=20, fields=FIELDS)` | The user's rows, newest first. |
 | `count_notifications(user, app_name=None, filters=None)` | The number of rows. |
 | `mark_read(user, name=None, app_name=None)` | Mark one row read, or all unread rows without `name`. A row of another user or app: `DoesNotExistError`. |
 | `find_by_message_id(user, message_id, app_name=None)` | The row of a push message id, else of that name. |
 
 An app changes the push of its notifications with the hook `fcm_push = {"<app_name>": "dotted.path"}`. The function gets the FCM Notification and returns a `Push`, or None to send nothing (for example when the user may no longer get it). Without the hook, the push has the title and body, and `data` plus `notification` (the row name).
+
+After commit, a new notification is published over Socket.IO to its user only (`frappe.publish_realtime(..., user=user)`). An app changes the event with the hook `fcm_realtime = {"<app_name>": "dotted.path"}`. The function gets the FCM Notification and returns `(event, payload)`, or None to send nothing. Without the hook, the event is `fcm_notification` with `{"notification": <row name>}`. Keep the payload to IDs; the client reads the row through its own API.
 
 When FCM says the token is dead, the device is deleted: `UNREGISTERED`, `NOT_FOUND`, or `INVALID_ARGUMENT` whose `fieldViolations` name `message.token`. Other errors, such as an `INVALID_ARGUMENT` for the message, keep the device. Each send writes an FCM Message Log.
 
