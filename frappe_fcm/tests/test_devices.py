@@ -1,6 +1,15 @@
 import frappe
 
-from frappe_fcm.devices import DEVICE, disable_devices, get_enabled_devices, register_device, remove_device
+from frappe_fcm.devices import (
+	DEVICE,
+	TOKEN_LENGTH,
+	clean_token,
+	disable_devices,
+	get_enabled_devices,
+	get_platform,
+	register_device,
+	remove_device,
+)
 from frappe_fcm.tests.fixtures import FCMTestCase
 
 
@@ -38,10 +47,30 @@ class TestDevices(FCMTestCase):
 		self.assertEqual((row.user, row.platform, row.enabled), (self.other_user, "iOS", 1))
 
 	def test_register_refuses_an_empty_token_and_an_unknown_platform(self):
-		with self.assertRaisesRegex(frappe.ValidationError, "token is required"):
-			register_device(self.user, "")
+		for token in ("", "  ", "x" * (TOKEN_LENGTH + 1)):
+			with self.assertRaisesRegex(frappe.ValidationError, "token is required"):
+				register_device(self.user, token)
 		with self.assertRaises(frappe.ValidationError):
 			register_device(self.user, frappe.generate_hash(), "Windows")
+
+	def test_register_strips_the_token(self):
+		token = frappe.generate_hash()
+
+		name = register_device(self.user, f" {token} ")
+
+		self.assertEqual(frappe.db.get_value(DEVICE, name, "token"), token)
+
+	def test_clean_token_and_platform_of_client_text(self):
+		self.assertEqual(clean_token(" abc "), "abc")
+		self.assertEqual(clean_token("x" * TOKEN_LENGTH), "x" * TOKEN_LENGTH)
+		for token in (None, 12, "", "   ", "x" * (TOKEN_LENGTH + 1)):
+			self.assertIsNone(clean_token(token), token)
+
+		self.assertEqual(
+			[get_platform(text) for text in (" Android ", "IOS", "web")], ["Android", "iOS", "Web"]
+		)
+		for text in (None, "", "windows", 1):
+			self.assertIsNone(get_platform(text), text)
 
 	def test_remove_deletes_the_device(self):
 		device = self.add_device(self.user)
