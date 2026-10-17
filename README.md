@@ -112,3 +112,22 @@ Pre-commit is configured to use the following tools for checking and formatting 
 ### License
 
 mit
+
+### Notification retries
+
+The server scheduler queues up to 100 due Pending/Failed notifications every two
+minutes. Immediate sends use the same worker. Each notification has at most five
+attempts, with exponential backoff; disabled delivery or missing devices/configuration
+do not consume attempts. Successful devices are retained in `delivery_state` and
+are skipped on retries. No database or Redis lock is held during provider calls.
+
+A committed Processing claim prevents concurrent workers from sending the same
+notification. A worker crash leaves that claim for operator review. A transport
+failure becomes Unknown because FCM may already have accepted it. Neither state
+is automatically replayed: FCM has no exactly-once send key. Operators must reconcile
+these outcomes before deciding whether a replay is appropriate. Exhausted rows also
+require review. Existing inbox rows without a delivery status are not replayed;
+legacy migration explicitly marks Pending/Failed candidates and Processed rows as Sent.
+
+Deploy the schema and scheduler hook with the normal site migration before running
+workers on this version. The worktree change does not run that migration.

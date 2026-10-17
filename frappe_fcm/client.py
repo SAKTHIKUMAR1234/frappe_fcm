@@ -39,7 +39,7 @@ class FCMClient:
 		try:
 			response = self.session.post(self.url, json={"message": message}, timeout=TIMEOUT_SECONDS)
 		except requests.RequestException as error:
-			raise FCMError("UNAVAILABLE", str(error))
+			raise FCMError("DELIVERY_UNKNOWN", str(error))
 		if not response.ok:
 			raise get_error(response)
 		return response.json()["name"]

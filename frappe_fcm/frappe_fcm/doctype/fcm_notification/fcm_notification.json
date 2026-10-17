@@ -20,7 +20,12 @@
   "section_break_content",
   "title",
   "body",
-  "data"
+  "data",
+  "delivery_status",
+  "attempts",
+  "next_retry",
+  "delivery_state",
+  "delivery_error"
  ],
  "fields": [
   {
@@ -97,6 +102,40 @@
    "fieldtype": "Code",
    "label": "Data",
    "options": "JSON"
+  },
+  {
+   "fieldname": "delivery_status",
+   "fieldtype": "Select",
+   "label": "Delivery Status",
+   "read_only": 1,
+   "options": "\nPending\nProcessing\nSent\nFailed\nUnknown\nExhausted",
+   "search_index": 1
+  },
+  {
+   "fieldname": "attempts",
+   "fieldtype": "Int",
+   "label": "Attempts",
+   "read_only": 1,
+   "default": "0"
+  },
+  {
+   "fieldname": "next_retry",
+   "fieldtype": "Datetime",
+   "label": "Next Retry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "delivery_state",
+   "fieldtype": "Code",
+   "label": "Device Delivery State",
+   "read_only": 1,
+   "options": "JSON"
+  },
+  {
+   "fieldname": "delivery_error",
+   "fieldtype": "Small Text",
+   "label": "Delivery Error",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,

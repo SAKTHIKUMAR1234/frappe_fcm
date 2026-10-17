@@ -10,6 +10,9 @@ from frappe_fcm.notifications import publish_notification
 
 
 class FCMNotification(Document):
+	def before_insert(self):
+		self.delivery_status = self.delivery_status or "Pending"
+
 	def after_insert(self):
 		"""Push the notification and publish its Socket.IO event after commit. A migrated row sets
 		`flags.skip_push` and gets neither."""

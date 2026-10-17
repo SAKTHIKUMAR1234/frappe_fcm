@@ -271,3 +271,6 @@ page_renderer = ["frappe_fcm.web_push.ServiceWorkerPage"]
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
+
+
+scheduler_events = {"cron": {"*/2 * * * *": ["frappe_fcm.retry.retry_notifications"]}}
